@@ -1,0 +1,136 @@
+// Hotel Reception Management System database schema.
+// Backend is Next.js Route Handlers (src/app/api/**) talking directly to
+// SQLite through Prisma — no separate ASP.NET / Tauri process. See BACKEND_INTEGRATION.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                Int       @id @default(autoincrement())
+  firstName         String
+  lastName          String
+  email             String    @unique
+  password          String
+  phoneNumber       String?
+  role              String    @default("Front Desk")
+  isActive          Boolean   @default(true)
+  avatarColor       String?
+  preferredLanguage String?
+  createdAt         DateTime  @default(now())
+  lastLogin         DateTime?
+}
+
+model RoomType {
+  id           Int      @id @default(autoincrement())
+  name         String
+  slug         String?
+  description  String?
+  basePrice    Float
+  maxOccupancy Int
+  maxAdults    Int
+  maxChildren  Int
+  amenities    String?
+  imageUrl     String?
+  createdAt    DateTime @default(now())
+  rooms        Room[]
+}
+
+model Room {
+  id           Int               @id @default(autoincrement())
+  roomNumber   String            @unique
+  floor        String
+  status       String            @default("Available")
+  isAvailable  Boolean           @default(true)
+  notes        String?
+  roomTypeId   Int
+  roomType     RoomType          @relation(fields: [roomTypeId], references: [id])
+  createdAt    DateTime          @default(now())
+  reservations ReservationRoom[]
+}
+
+model Guest {
+  id             Int           @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  email          String?       @unique
+  phoneNumber    String?
+  nationality    String?
+  passportNumber String?
+  idNumber       String?
+  address        String?
+  isVip          Boolean       @default(false)
+  totalStays     Int           @default(0)
+  totalSpent     Float         @default(0)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  reservations   Reservation[]
+}
+
+model Reservation {
+  id                Int               @id @default(autoincrement())
+  reservationNumber String            @unique
+  guestId           Int
+  guest             Guest             @relation(fields: [guestId], references: [id])
+  checkInDate       DateTime
+  checkOutDate      DateTime
+  adults            Int               @default(1)
+  children          Int               @default(0)
+  status            String            @default("Pending")
+  totalAmount       Float             @default(0)
+  depositAmount     Float             @default(0)
+  discountAmount    Float             @default(0)
+  specialRequests   String?
+  checkedInAt       DateTime?
+  checkedOutAt      DateTime?
+  createdAt         DateTime          @default(now())
+  rooms             ReservationRoom[]
+  payments          Payment[]
+}
+
+model ReservationRoom {
+  id            Int         @id @default(autoincrement())
+  reservationId Int
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  roomId        Int
+  room          Room        @relation(fields: [roomId], references: [id])
+}
+
+model Payment {
+  id              Int         @id @default(autoincrement())
+  paymentNumber   String      @unique
+  reservationId   Int
+  reservation     Reservation @relation(fields: [reservationId], references: [id])
+  amount          Float
+  paymentMethod   String
+  paymentDate     DateTime    @default(now())
+  status          String      @default("Paid")
+  referenceNumber String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+}
+
+model Setting {
+  id       Int     @id @default(autoincrement())
+  key      String  @unique
+  value    String
+  category String?
+}
+
+model Notification {
+  id            Int      @id @default(autoincrement())
+  title         String
+  description   String
+  type          String   @default("Information")
+  isRead        Boolean  @default(false)
+  isOverdue     Boolean  @default(false)
+  userId        Int?
+  reservationId Int?
+  roomId        Int?
+  createdAt     DateTime @default(now())
+}

@@ -1,0 +1,37 @@
+// prisma/seed.ts
+// ADAPT: model name ("user"), field names, and the hashing library to
+// match your actual schema.prisma User model and your login route's
+// hashing logic (bcrypt, argon2, etc. — whatever the login API compares
+// against). Using the WRONG hash algorithm here is another common cause
+// of "password incorrect" even when the row exists.
+
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs"; // or "bcrypt" / "argon2" — match your login route
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const email = "admin@hotel.local";
+  const plainPassword = "ChangeMe123!";
+  const passwordHash = await bcrypt.hash(plainPassword, 10);
+
+  await prisma.user.upsert({
+    where: { email },
+    update: {}, // leave existing account untouched on re-run
+    create: {
+      email,
+      password: passwordHash, // ADAPT: field name may be passwordHash, etc.
+      name: "Admin",
+      role: "ADMIN", // ADAPT: match your Role enum/field
+    },
+  });
+
+  console.log(`Seeded user: ${email} / ${plainPassword}`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

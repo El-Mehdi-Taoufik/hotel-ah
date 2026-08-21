@@ -1,0 +1,85 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# ASP.NET Core
+bin/
+obj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+dev.db
+hotel_management.db
+
+# Electron
+resources/icon.ico (if generated)
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+node_modules/
+.next/
+src-tauri/target/
+src-tauri/resources/standalone/node_modules/
+src-tauri/resources/standalone/.next/
+.env
+.env.local
+prisma/dev.db
+src-tauri/resources/prisma/dev.db
