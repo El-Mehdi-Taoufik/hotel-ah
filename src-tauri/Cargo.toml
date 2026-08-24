@@ -12,9 +12,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-# Needed at runtime to resolve a free-ish TCP port and poll server readiness.
-# (std::net is enough for both, so no extra crates required.)
+rand = "0.8"
 
 [profile.release]
 codegen-units = 1
