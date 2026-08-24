@@ -95,9 +95,6 @@ mod server {
 
         let database_url = format!("file:{}", db_path.to_string_lossy().replace('\\', "/"));
 
-        // No system Node/npm/npx is used here. Prisma migrations and seed are
-        // already represented by the production.db template created during
-        // packaging, while subsequent application data stays in AppData.
         let child = Command::new(&node_exe)
             .arg(&server_js)
             .env("NODE_ENV", "production")
@@ -143,10 +140,8 @@ fn main() {
             let target_url = "http://localhost:3000".to_string();
 
             #[cfg(not(debug_assertions))]
-            let target_url = server::start(&handle).map_err(|error| {
-                eprintln!("Hotel Aguelmam production startup failed: {error}");
-                tauri::Error::Anyhow(anyhow::anyhow!(error))
-            })?;
+            let target_url = server::start(&handle)
+                .map_err(std::io::Error::other)?;
 
             WebviewWindowBuilder::new(
                 &handle,
