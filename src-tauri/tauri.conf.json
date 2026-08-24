@@ -27,7 +27,8 @@
     ],
     "resources": [
       "resources/standalone/**/*",
-      "resources/prisma/**/*"
+      "resources/prisma/**/*",
+      "resources/node/**/*"
     ]
   }
 }
