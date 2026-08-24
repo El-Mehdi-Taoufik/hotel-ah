@@ -43,8 +43,13 @@ copyDir(prismaClientSrc, path.join(standaloneDest, "node_modules", "@prisma", "c
 
 const databaseUrl = `file:${tempDb.replace(/\\/g, "/")}`;
 const prismaCli = require.resolve("prisma/build/index.js");
+const tsxCli = require.resolve("tsx/dist/cli.mjs");
 run(process.execPath, [prismaCli, "migrate", "deploy"], { DATABASE_URL: databaseUrl });
-run(process.execPath, [prismaCli, "db", "seed"], { DATABASE_URL: databaseUrl });
+run(process.execPath, [tsxCli, path.join(root, "prisma", "seed.ts")], { DATABASE_URL: databaseUrl });
+
+if (!fs.existsSync(tempDb)) {
+  throw new Error(`[prepare-standalone] seed completed but database was not created: ${tempDb}`);
+}
 
 fs.mkdirSync(path.dirname(templateDb), { recursive: true });
 fs.copyFileSync(tempDb, templateDb);
