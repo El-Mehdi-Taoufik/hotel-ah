@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const prisma = process.env.DATABASE_URL
+  ? new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } })
+  : new PrismaClient();
 
 async function main() {
   const adminPassword = await bcrypt.hash("Admin@123", 10);
@@ -28,9 +30,7 @@ async function main() {
 
   for (const rt of roomTypes) {
     const existing = await prisma.roomType.findFirst({ where: { name: rt.name } });
-    if (!existing) {
-      await prisma.roomType.create({ data: rt });
-    }
+    if (!existing) await prisma.roomType.create({ data: rt });
   }
 
   const allRoomTypes = await prisma.roomType.findMany();
@@ -59,45 +59,10 @@ async function main() {
   }
 
   const defaultSettings: Record<string, unknown> = {
-    hotel: {
-      hotelName: "Hotel Aguelmam",
-      address: "",
-      phone: "",
-      email: "",
-      currency: "MAD",
-      timeZone: "Africa/Casablanca",
-      language: "en",
-    },
-    reservation: {
-      defaultCheckInTime: "14:00",
-      defaultCheckOutTime: "12:00",
-      reservationPrefix: "RES",
-      autoConfirmReservations: false,
-      allowOverbooking: false,
-    },
-    payment: {
-      taxPercentage: 20,
-      depositPercentage: 30,
-      defaultPaymentMethod: "Cash",
-    },
-    system: {
-      theme: "light",
-      fontSize: "medium",
-      compactMode: false,
-      sidebarCollapsed: false,
-      sidebarPosition: "left",
-      enableNotifications: true,
-      enableEmailNotifications: false,
-      enableSoundNotifications: false,
-      enableDesktopNotifications: false,
-      autoLogoutTimeout: 30,
-      rememberMe: true,
-      dateFormat: "DD/MM/YYYY",
-      timeFormat: "24h",
-      defaultLanguage: "en",
-      defaultCurrency: "MAD",
-      defaultTax: 20,
-    },
+    hotel: { hotelName: "Hotel Aguelmam", address: "", phone: "", email: "", currency: "MAD", timeZone: "Africa/Casablanca", language: "en" },
+    reservation: { defaultCheckInTime: "14:00", defaultCheckOutTime: "12:00", reservationPrefix: "RES", autoConfirmReservations: false, allowOverbooking: false },
+    payment: { taxPercentage: 20, depositPercentage: 30, defaultPaymentMethod: "Cash" },
+    system: { theme: "light", fontSize: "medium", compactMode: false, sidebarCollapsed: false, sidebarPosition: "left", enableNotifications: true, enableEmailNotifications: false, enableSoundNotifications: false, enableDesktopNotifications: false, autoLogoutTimeout: 30, rememberMe: true, dateFormat: "DD/MM/YYYY", timeFormat: "24h", defaultLanguage: "en", defaultCurrency: "MAD", defaultTax: 20 },
   };
 
   for (const [key, value] of Object.entries(defaultSettings)) {
