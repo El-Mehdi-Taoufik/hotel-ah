@@ -6,7 +6,7 @@ use tauri::{WebviewUrl, WebviewWindowBuilder};
 #[cfg(not(debug_assertions))]
 mod server {
     use rand::RngCore;
-    use std::fs;
+    use std::fs::{self, File, OpenOptions};
     use std::net::TcpStream;
     use std::path::PathBuf;
     use std::process::{Child, Command, Stdio};
@@ -64,6 +64,14 @@ mod server {
         Ok(secret)
     }
 
+    fn open_server_log(app_data_dir: &PathBuf) -> Result<File, String> {
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(app_data_dir.join("server.log"))
+            .map_err(|e| format!("cannot open server log: {e}"))
+    }
+
     pub fn start(handle: &tauri::AppHandle) -> Result<String, String> {
         let app_data_dir = handle
             .path()
@@ -94,6 +102,10 @@ mod server {
         }
 
         let database_url = format!("file:{}", db_path.to_string_lossy().replace('\\', "/"));
+        let log = open_server_log(&app_data_dir)?;
+        let log_err = log
+            .try_clone()
+            .map_err(|e| format!("cannot clone server log handle: {e}"))?;
 
         let child = Command::new(&node_exe)
             .arg(&server_js)
@@ -108,8 +120,8 @@ mod server {
                     .parent()
                     .ok_or_else(|| "invalid standalone server path".to_string())?,
             )
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::from(log))
+            .stderr(Stdio::from(log_err))
             .spawn()
             .map_err(|e| format!("failed to start bundled Next.js server: {e}"))?;
 
@@ -123,8 +135,9 @@ mod server {
                 }
             }
             return Err(format!(
-                "Next.js server did not become ready on 127.0.0.1:{PORT} within {} seconds",
-                STARTUP_TIMEOUT.as_secs()
+                "Next.js server did not become ready on 127.0.0.1:{PORT} within {} seconds; see {}",
+                STARTUP_TIMEOUT.as_secs(),
+                app_data_dir.join("server.log").display()
             ));
         }
 
