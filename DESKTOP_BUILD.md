@@ -1,39 +1,95 @@
-# Desktop packaging
+# Hotel Aguelmam desktop build
 
-## Architecture decision
+The desktop application uses **Tauri 2 + Next.js standalone + Prisma + SQLite**.
 
-This project no longer ships a separate ASP.NET Core backend or a Tauri/Rust shell. The backend is
-Prisma + SQLite running inside Next.js itself (see `BACKEND_INTEGRATION.md`), so there is nothing
-external to bundle, start, or stop — a single Next.js server process serves both the UI and the
-API, and reads/writes the SQLite file directly.
+## Production architecture
 
-That removes the entire reason Tauri + a sidecar ASP.NET process existed in the first place (they
-were there to spawn and manage the .NET backend alongside the frontend). Concretely, this repo no
-longer has:
+```text
+Tauri desktop executable
+        |
+        +--> bundled Node runtime (node.exe)
+        |        |
+        |        +--> .next/standalone/server.js
+        |
+        +--> writable AppData
+                 |
+                 +--> hotel.db
+                 +--> jwt-secret
 
-- `backend/` (the ASP.NET Core Clean-Architecture project)
-- `@tauri-apps/api`, `@tauri-apps/cli`, `scripts/publish-backend.js`
-- The `dev:all`, `build:backend`, `build:tauri`, `tauri`, `tauri:dev` npm scripts
+Next.js server: 127.0.0.1:3579
+Prisma: DATABASE_URL=file:<AppData>/hotel.db
+```
 
-## Running it
+The installed application does **not** require Node.js, npm, npx, or the Prisma CLI to be installed on the user's PC.
 
-There is no desktop-specific build required to use the app — `npm run dev` / `npm run build && npm
-run start` is a complete, self-contained server (UI + API + database).
+## Build
 
-## Optional: wrapping it as a desktop app with Electron
+From the repository root on Windows:
 
-An `electron/` folder and the `electron` / `electron-builder` dev dependencies are still present
-in `package.json` for teams that want a native window around the app later. That work has not been
-done yet (`electron/main.js` is currently empty) — implementing it would mean:
+```powershell
+npm ci
+npm run build:tauri
+```
 
-1. Run `next build` to produce a production build.
-2. Start the Next.js server (`next start`, or the standalone output) as a child process from
-   Electron's main process, pointing `DATABASE_URL` at a writable path inside the user's app-data
-   directory (SQLite files must live somewhere writable, not inside the packaged app bundle).
-3. Load `http://localhost:<port>` in a `BrowserWindow` once the server is ready.
-4. Package with `electron-builder`, including the compiled `.next` output and `prisma/` (schema +
-   migrations, so `prisma migrate deploy` can run against the user's local `dev.db` on first
-   launch).
+`tauri.conf.json` runs:
 
-This is meaningfully simpler than the previous Tauri + ASP.NET setup because there is only one
-process to manage instead of two, and no cross-process port negotiation.
+```text
+npm run build
+node scripts/prepare-standalone.js
+```
+
+The preparation script creates these packaged resources:
+
+- `src-tauri/resources/standalone/server.js`
+- `src-tauri/resources/standalone/.next/static/**`
+- `src-tauri/resources/standalone/public/**`
+- `src-tauri/resources/prisma/**`
+- `src-tauri/resources/prisma/production.db`
+- `src-tauri/resources/node/node.exe`
+
+`production.db` is created at build time from the committed Prisma migration and seed. On first launch it is copied to the user's writable Tauri AppData directory. Existing databases are never overwritten, so application data persists across restarts and upgrades.
+
+## Development
+
+These commands remain unchanged:
+
+```powershell
+npm run dev
+npm run tauri:dev
+```
+
+Development Tauri continues to load `http://localhost:3000` and does not start the production server.
+
+## Production startup
+
+Release Tauri starts the bundled `node.exe` directly and passes:
+
+```text
+NODE_ENV=production
+HOSTNAME=127.0.0.1
+PORT=3579
+DATABASE_URL=file:<AppData>/hotel.db
+JWT_SECRET=<persistent random secret>
+```
+
+The window is created only after TCP readiness on `127.0.0.1:3579` succeeds. If the server cannot start, Tauri fails during startup instead of opening a WebView that only shows `ERR_CONNECTION_REFUSED`.
+
+## Login
+
+The first-run production database is seeded with:
+
+```text
+Email:    admin@hotel.com
+Password: Admin@123
+```
+
+## Windows installer
+
+The installer is produced under:
+
+```text
+src-tauri/target/release/bundle/nsis/
+src-tauri/target/release/bundle/msi/
+```
+
+A GitHub Actions workflow also builds the Windows installer on the `fix/tauri-production-runtime` branch and verifies that the standalone server, production database template, and bundled Node runtime are present before uploading the installers as artifacts.
