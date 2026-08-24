@@ -50,9 +50,14 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
 export async function createSessionCookie(payload: SessionPayload) {
   const token = await signSession(payload);
   const cookieStore = await cookies();
+  const isTauriDesktop = process.env.TAURI_DESKTOP === "1";
+
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Production web deployments stay Secure. The desktop app serves its
+    // Next.js server over a loopback HTTP origin (127.0.0.1:3579), so the
+    // Tauri process explicitly opts out of Secure for that local cookie.
+    secure: process.env.NODE_ENV === "production" && !isTauriDesktop,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
