@@ -14,7 +14,7 @@ const standaloneDest = path.join(destRoot, "standalone");
 const prismaDest = path.join(destRoot, "prisma");
 const nodeDest = path.join(destRoot, "node", process.platform === "win32" ? "node.exe" : "node");
 const templateDb = path.join(prismaDest, "production.db");
-const tempDb = path.join(root, ".tauri-production-template.db");
+const buildDb = path.join(prismaSrc, "dev.db");
 
 function copyDir(src, dest) {
   if (!fs.existsSync(src)) throw new Error(`[prepare-standalone] required path is missing: ${src}`);
@@ -32,7 +32,7 @@ function run(command, args, env = {}) {
 }
 
 fs.rmSync(destRoot, { recursive: true, force: true });
-fs.rmSync(tempDb, { force: true });
+fs.rmSync(buildDb, { force: true });
 
 copyDir(standaloneSrc, standaloneDest);
 copyDir(staticSrc, path.join(standaloneDest, ".next", "static"));
@@ -41,19 +41,18 @@ copyDir(prismaSrc, prismaDest);
 copyDir(prismaEngineSrc, path.join(standaloneDest, "node_modules", ".prisma", "client"));
 copyDir(prismaClientSrc, path.join(standaloneDest, "node_modules", "@prisma", "client"));
 
-const databaseUrl = `file:${tempDb.replace(/\\/g, "/")}`;
+const databaseUrl = `file:${buildDb.replace(/\\/g, "/")}`;
 const prismaCli = require.resolve("prisma/build/index.js");
-const tsxCli = require.resolve("tsx/dist/cli.mjs");
-run(process.execPath, [prismaCli, "migrate", "deploy"], { DATABASE_URL: databaseUrl });
-run(process.execPath, [tsxCli, path.join(root, "prisma", "seed.ts")], { DATABASE_URL: databaseUrl });
+run(process.execPath, [prismaCli, "migrate", "deploy"]);
+run(process.execPath, [prismaCli, "db", "seed"], { DATABASE_URL: databaseUrl });
 
-if (!fs.existsSync(tempDb)) {
-  throw new Error(`[prepare-standalone] seed completed but database was not created: ${tempDb}`);
+if (!fs.existsSync(buildDb)) {
+  throw new Error(`[prepare-standalone] seed completed but database was not created: ${buildDb}`);
 }
 
 fs.mkdirSync(path.dirname(templateDb), { recursive: true });
-fs.copyFileSync(tempDb, templateDb);
-fs.rmSync(tempDb, { force: true });
+fs.copyFileSync(buildDb, templateDb);
+fs.rmSync(buildDb, { force: true });
 
 fs.mkdirSync(path.dirname(nodeDest), { recursive: true });
 fs.copyFileSync(process.execPath, nodeDest);
