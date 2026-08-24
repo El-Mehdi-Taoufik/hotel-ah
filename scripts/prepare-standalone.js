@@ -15,6 +15,8 @@ const standaloneSrc = path.join(root, ".next", "standalone");
 const staticSrc = path.join(root, ".next", "static");
 const publicSrc = path.join(root, "public");
 const prismaSrc = path.join(root, "prisma");
+const prismaEngineSrc = path.join(root, "node_modules", ".prisma", "client");
+const prismaClientSrc = path.join(root, "node_modules", "@prisma", "client");
 const destRoot = path.join(root, "src-tauri", "resources");
 const standaloneDest = path.join(destRoot, "standalone");
 const prismaDest = path.join(destRoot, "prisma");
@@ -39,10 +41,6 @@ function run(command, args, env = {}) {
   });
 }
 
-if (process.platform !== "win32") {
-  console.warn("[prepare-standalone] This packaging fix targets Windows; the bundled runtime will use the current platform's Node executable.");
-}
-
 fs.rmSync(destRoot, { recursive: true, force: true });
 fs.rmSync(tempDb, { force: true });
 
@@ -50,6 +48,13 @@ copyDir(standaloneSrc, standaloneDest);
 copyDir(staticSrc, path.join(standaloneDest, ".next", "static"));
 copyDir(publicSrc, path.join(standaloneDest, "public"));
 copyDir(prismaSrc, prismaDest);
+
+// Next's file tracing normally includes Prisma, but the native SQLite query
+// engine is critical for the desktop package. Copy the generated Prisma
+// client and native engine explicitly so the standalone server is robust to
+// tracing changes between Next.js versions.
+copyDir(prismaEngineSrc, path.join(standaloneDest, "node_modules", ".prisma", "client"));
+copyDir(prismaClientSrc, path.join(standaloneDest, "node_modules", "@prisma", "client"));
 
 // Build a clean first-run database from the committed Prisma migration and
 // seed. This happens on the developer/build machine only. The installed app
