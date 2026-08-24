@@ -102,6 +102,7 @@ mod server {
             .env("HOSTNAME", "127.0.0.1")
             .env("DATABASE_URL", &database_url)
             .env("JWT_SECRET", &jwt_secret)
+            .env("TAURI_DESKTOP", "1")
             .current_dir(
                 server_js
                     .parent()
