@@ -3,6 +3,8 @@ import autoTable from "jspdf-autotable";
 
 type AnyRecord = Record<string, any>;
 
+type PdfRgb = readonly [number, number, number];
+
 const BORDER = [225, 220, 212] as const;
 const TEXT = [47, 42, 37] as const;
 const MUTED = [105, 98, 90] as const;
@@ -15,7 +17,7 @@ const guestName = (g: AnyRecord | undefined) => `${g?.firstName ?? ""} ${g?.last
 const roomOf = (r: AnyRecord | undefined) => r?.rooms?.[0]?.room?.roomNumber ?? r?.rooms?.[0]?.room?.number ?? r?.rooms?.[0]?.number ?? r?.room?.roomNumber ?? r?.room?.number ?? "N/A";
 const roomTypeOf = (r: AnyRecord | undefined) => r?.rooms?.[0]?.room?.roomType?.name ?? r?.room?.roomType?.name ?? "";
 
-function box(doc: jsPDF, x: number, y: number, w: number, h: number, fill = LIGHT) {
+function box(doc: jsPDF, x: number, y: number, w: number, h: number, fill: PdfRgb = LIGHT) {
   doc.setFillColor(...fill);
   doc.setDrawColor(...BORDER);
   doc.roundedRect(x, y, w, h, 3, 3, "FD");
