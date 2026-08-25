@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const body = await request.json().catch(() => null);
     const { reservationId, amount, paymentMethod, paymentDate } = body ?? {};
 
@@ -30,7 +30,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "reservationId and amount are required" }, { status: 400 });
     }
 
-    const reservation = await prisma.reservation.findUnique({ where: { id: Number(reservationId) } });
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: Number(reservationId) },
+      include: { guest: true },
+    });
     if (!reservation) {
       return NextResponse.json({ success: false, message: "Reservation not found" }, { status: 404 });
     }
@@ -52,6 +55,22 @@ export async function POST(request: Request) {
       },
       include: paymentInclude,
     });
+
+    try {
+      await prisma.notification.create({
+        data: {
+          title: "Payment Received",
+          description: `${Number(amount).toFixed(2)} ${paymentMethod || "Cash"} — ${reservation.guest.firstName} ${reservation.guest.lastName} — ${payment.paymentNumber}`,
+          type: "Success",
+          isRead: false,
+          isOverdue: false,
+          userId: session.userId,
+          reservationId: reservation.id,
+        },
+      });
+    } catch (notificationError) {
+      console.error("Failed to create payment notification:", notificationError);
+    }
 
     return NextResponse.json({ success: true, data: serializePayment(payment) }, { status: 201 });
   } catch (error) {
