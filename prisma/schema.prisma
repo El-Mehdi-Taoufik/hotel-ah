@@ -55,21 +55,22 @@ model Room {
 }
 
 model Guest {
-  id             Int           @id @default(autoincrement())
-  firstName      String
-  lastName       String
-  email          String?       @unique
-  phoneNumber    String?
-  nationality    String?
-  passportNumber String?
-  idNumber       String?
-  address        String?
-  isVip          Boolean       @default(false)
-  totalStays     Int           @default(0)
-  totalSpent     Float         @default(0)
-  notes          String?
-  createdAt      DateTime      @default(now())
-  reservations   Reservation[]
+  id                Int           @id @default(autoincrement())
+  firstName         String
+  lastName          String
+  email             String?       @unique
+  phoneNumber       String?
+  nationality       String?
+  passportNumber    String?
+  idNumber          String?
+  idDocumentImage   String?
+  address           String?
+  isVip             Boolean       @default(false)
+  totalStays        Int           @default(0)
+  totalSpent        Float         @default(0)
+  notes             String?
+  createdAt         DateTime      @default(now())
+  reservations      Reservation[]
 }
 
 model Reservation {
@@ -87,7 +88,7 @@ model Reservation {
   discountAmount    Float             @default(0)
   specialRequests   String?
   checkedInAt       DateTime?
-  checkedOutAt      DateTime?
+  checkedOutAt     DateTime?
   createdAt         DateTime          @default(now())
   rooms             ReservationRoom[]
   payments          Payment[]
