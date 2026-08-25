@@ -14,7 +14,6 @@ import {
   BarChart3,
   ShieldCheck,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -42,71 +41,85 @@ const allNav = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { common: t, isLoaded, direction } = useTranslation();
+  const { common: t, isLoaded, direction, language } = useTranslation();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [nav, setNav] = useState(allNav);
 
   useEffect(() => {
     loadUserFromStorage();
-    
+
     const handleStorageChange = () => {
       loadUserFromStorage();
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('userUpdated', handleStorageChange);
-    
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("userUpdated", handleStorageChange);
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('userUpdated', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("userUpdated", handleStorageChange);
     };
   }, []);
 
   const loadUserFromStorage = () => {
     try {
-      const userStr = localStorage.getItem('user');
+      const userStr = localStorage.getItem("user");
       if (userStr) {
         const userData = JSON.parse(userStr);
         setUser(userData);
-        
-        // Filter navigation based on user role
-        const filteredNav = allNav.filter(item => {
+
+        const filteredNav = allNav.filter((item) => {
           if (item.requiresAdmin) {
-            return userData.role === 'Admin';
+            return userData.role === "Admin";
           }
           return true;
         });
         setNav(filteredNav);
       }
     } catch (error) {
-      console.error('Error loading user from storage:', error);
+      console.error("Error loading user from storage:", error);
       setUser(null);
-      setNav(allNav.filter(item => !item.requiresAdmin));
+      setNav(allNav.filter((item) => !item.requiresAdmin));
     }
   };
 
+  const isArabic = language === "ar";
+  const fallbackLabels: Record<string, string> = {
+    dashboard: isArabic ? "لوحة التحكم" : "Dashboard",
+    reservations: isArabic ? "الحجوزات" : "Reservations",
+    calendar: isArabic ? "التقويم" : "Calendar",
+    rooms: isArabic ? "الغرف" : "Rooms",
+    newBooking: isArabic ? "حجز جديد" : "New Booking",
+    guests: isArabic ? "الضيوف" : "Guests",
+    payments: isArabic ? "المدفوعات" : "Payments",
+    reports: isArabic ? "التقارير" : "Reports",
+    users: isArabic ? "المستخدمين" : "Users",
+    settings: isArabic ? "الإعدادات" : "Settings",
+  };
+
   return (
-    <aside 
-      className={`hidden lg:flex flex-col w-64 shrink-0 h-screen bg-[#F5F1EA] border-[#E7DFD4] px-4 py-6 ${direction === 'rtl' ? 'border-l' : 'border-r'}`}
+    <aside
+      className={`hidden lg:flex flex-col w-64 shrink-0 h-screen bg-[#F5F1EA] border-[#E7DFD4] px-4 py-6 ${direction === "rtl" ? "border-l" : "border-r"}`}
       dir={direction}
     >
       <div className="flex items-center gap-2.5 px-2 mb-8">
-        <img 
-          src="/logo.jpeg" 
-          alt="Hotel Aguelmam Logo" 
+        <img
+          src="/logo.jpeg"
+          alt="Hotel Aguelmam Logo"
           className="h-9 w-9 rounded-xl object-contain flex items-center justify-center shrink-0"
         />
         <div className="min-w-0">
           <p className="font-semibold text-[#2F2A25] leading-tight">Hotel Aguelmam</p>
-          <p className="text-[11px] text-[#9A9085] leading-tight">Reception Suite</p>
+          <p className="text-[11px] text-[#9A9085] leading-tight">
+            {isArabic ? "نظام الاستقبال" : "Reception Suite"}
+          </p>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto">
         {nav.map(({ href, key, icon: Icon }) => {
-          const isActive =
-            href === "/reservations" ? pathname === href : pathname.startsWith(href);
-          const label = isLoaded ? t(key) : key.charAt(0).toUpperCase() + key.slice(1);
+          const isActive = href === "/reservations" ? pathname === href : pathname.startsWith(href);
+          const label = isLoaded ? t(key) || fallbackLabels[key] : fallbackLabels[key];
           return (
             <Link
               key={href}
@@ -127,7 +140,9 @@ export function Sidebar() {
 
       <div className="glass-card p-3.5 mt-4 bg-white border-[#E7DFD4]">
         <p className="text-xs text-[#6B6258] leading-relaxed">
-          {isLoaded ? t('occupancyTrend') : "Occupancy is trending up"} <span className="text-[#4CAF50] font-medium">+8%</span> {isLoaded ? t('thisWeek') : "this week"}.
+          {isArabic ? "معدل الإشغال في ارتفاع" : isLoaded ? t("occupancyTrend") || "Occupancy is trending up" : "Occupancy is trending up"} {" "}
+          <span className="text-[#4CAF50] font-medium">+8%</span>{" "}
+          {isArabic ? "هذا الأسبوع" : isLoaded ? t("thisWeek") || "this week" : "this week"}.
         </p>
       </div>
     </aside>
