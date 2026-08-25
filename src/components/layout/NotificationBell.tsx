@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Bell, X, Check, Trash2, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react";
 import { notificationService, Notification } from "@/services/notification.service";
+import { eventEmitter, EVENTS } from "@/lib/events";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -17,7 +18,7 @@ export function NotificationBell() {
     fetchNotifications();
     fetchUnreadCount();
 
-    // Poll for new notifications every 30 seconds
+    // Poll for new notifications and automatically process expired stays.
     const interval = setInterval(() => {
       fetchNotifications();
       fetchUnreadCount();
@@ -28,8 +29,16 @@ export function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
-      const data = await notificationService.getUnread();
-      setNotifications(data.slice(0, 5)); // Show latest 5 unread notifications
+      const result = await notificationService.getUnreadWithProcessing();
+      setNotifications(result.data.slice(0, 5)); // Show latest 5 unread notifications
+
+      // An expired stay changes the reservation to CheckedOut and the room to
+      // Cleaning. Refresh calendar, rooms and dashboard immediately.
+      if (result.processedExpiredReservations > 0) {
+        eventEmitter.emit(EVENTS.RESERVATION_STATUS_CHANGED);
+        eventEmitter.emit(EVENTS.ROOM_STATUS_CHANGED);
+        eventEmitter.emit(EVENTS.DASHBOARD_REFRESH);
+      }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
