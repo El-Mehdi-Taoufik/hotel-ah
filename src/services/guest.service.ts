@@ -71,6 +71,20 @@ export const guestService = {
     const response = await apiClient.delete<{ success: boolean; message?: string }>(`/guests/${id}`);
     return response;
   },
+
+  getIdImage: async (id: number): Promise<string | null> => {
+    const response = await apiClient.get<{ success: boolean; data: string | null }>(`/guests/${id}/id-image`);
+    return response.data;
+  },
+
+  uploadIdImage: async (id: number, image: string): Promise<void> => {
+    const response = await apiClient.post<{ success: boolean; message?: string }>(`/guests/${id}/id-image`, { image });
+    if (!response.success) throw new Error(response.message || 'Failed to upload ID image');
+  },
+
+  deleteIdImage: async (id: number): Promise<void> => {
+    await apiClient.delete(`/guests/${id}/id-image`);
+  },
 };
 
 export default guestService;

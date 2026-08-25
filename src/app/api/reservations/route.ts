@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const body = await request.json().catch(() => null);
     const {
       guestId,
@@ -142,6 +142,25 @@ export async function POST(request: Request) {
           status: Number(depositAmount) >= Number(totalAmount ?? 0) ? "Paid" : "Partial",
         },
       });
+    }
+
+    // Notifications are intentionally non-blocking: a notification failure must
+    // never make a successful reservation fail.
+    try {
+      await prisma.notification.create({
+        data: {
+          title: "New Reservation",
+          description: `${guest.firstName} ${guest.lastName} — ${reservation.reservationNumber} — Room ${room.roomNumber}`,
+          type: "Information",
+          isRead: false,
+          isOverdue: false,
+          userId: session.userId,
+          reservationId: reservation.id,
+          roomId: room.id,
+        },
+      });
+    } catch (notificationError) {
+      console.error("Failed to create reservation notification:", notificationError);
     }
 
     return NextResponse.json({ success: true, data: serializeReservation(reservation) }, { status: 201 });

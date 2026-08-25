@@ -10,7 +10,7 @@ const reservationInclude = {
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const { id } = await params;
     const body = await request.json().catch(() => null);
     const { status } = body ?? {};
@@ -41,6 +41,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           })
         )
       );
+    }
+
+    try {
+      const notificationType = status === "Cancelled" ? "Warning" : status === "CheckedIn" || status === "CheckedOut" ? "Success" : "Information";
+      await prisma.notification.create({
+        data: {
+          title: `Reservation ${status}`,
+          description: `${reservation.guest.firstName} ${reservation.guest.lastName} — ${reservation.reservationNumber}`,
+          type: notificationType,
+          isRead: false,
+          isOverdue: false,
+          userId: session.userId,
+          reservationId: reservation.id,
+          roomId: reservation.rooms[0]?.roomId,
+        },
+      });
+    } catch (notificationError) {
+      console.error("Failed to create reservation status notification:", notificationError);
     }
 
     return NextResponse.json({ success: true, data: serializeReservation(reservation) });
