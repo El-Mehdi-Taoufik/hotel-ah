@@ -3,7 +3,6 @@ import autoTable from "jspdf-autotable";
 
 type AnyRecord = Record<string, any>;
 
-const GOLD = [140, 106, 67] as const;
 const BORDER = [225, 220, 212] as const;
 const TEXT = [47, 42, 37] as const;
 const MUTED = [105, 98, 90] as const;
@@ -111,16 +110,16 @@ export function exportInvoicePdf(payment: AnyRecord) {
   doc.setFont("helvetica", "normal"); doc.setTextColor(...MUTED);
   doc.text(`ICE / CIN: ${reservation.guest?.idNumber ?? reservation.guest?.passportNumber ?? ""}`, 14, 41);
 
+  const checkIn = new Date(reservation.checkInDate).getTime();
+  const checkOut = new Date(reservation.checkOutDate).getTime();
+  const nights = Number(reservation.nights ?? (Number.isFinite(checkIn) && Number.isFinite(checkOut) ? Math.max(1, Math.round((checkOut - checkIn) / 86400000)) : 1));
+  const total = Number(payment.amount ?? reservation.totalAmount ?? 0);
+
   autoTable(doc, {
     startY: 52,
     margin: { left: 14, right: 14 },
     head: [["Désignation des prestations", "PRIX", "NUITEES", "TOTAL"]],
-    body: [[
-      `Chambre ${roomOf(reservation)}`,
-      money((reservation.totalAmount ?? payment.amount ?? 0) / Math.max(1, Number(reservation.nights ?? 1))),
-      String(reservation.nights ?? Math.max(1, Math.round((new Date(reservation.checkOutDate).getTime() - new Date(reservation.checkInDate).getTime()) / 86400000))),
-      money(payment.amount ?? reservation.totalAmount),
-    ]],
+    body: [[`Chambre ${roomOf(reservation)}`, money(total / nights), String(nights), money(total)]],
     theme: "grid",
     headStyles: { fillColor: [245, 245, 245], textColor: TEXT, fontStyle: "bold", lineColor: BORDER, lineWidth: 0.25 },
     bodyStyles: { textColor: TEXT, lineColor: BORDER, lineWidth: 0.25 },
@@ -129,11 +128,11 @@ export function exportInvoicePdf(payment: AnyRecord) {
 
   const y = (doc as any).lastAutoTable?.finalY ?? 80;
   doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...TEXT);
-  doc.text(`TOTAL TTC ${money(payment.amount ?? reservation.totalAmount)}`, 196, y + 18, { align: "right" });
+  doc.text(`TOTAL TTC ${money(total)}`, 196, y + 18, { align: "right" });
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...MUTED);
   doc.text("Arrêtée la présente facture à la somme de :", 14, y + 34);
   doc.setFont("helvetica", "italic");
-  doc.text(`${money(payment.amount ?? reservation.totalAmount)}`, 14, y + 42);
+  doc.text(money(total), 14, y + 42);
 
   doc.setDrawColor(...BORDER);
   doc.rect(14, y + 55, 78, 24);
@@ -147,12 +146,7 @@ export function exportInvoicePdf(payment: AnyRecord) {
 export function exportCurrentGuestsPdf(reservations: AnyRecord[]) {
   const doc = new jsPDF("p", "mm", "a4");
   header(doc, "CURRENT GUESTS", `Current Guests Report - ${date(new Date())}`);
-  const rows = reservations.map((r) => [
-    r.guest?.firstName ?? "",
-    r.guest?.lastName ?? "",
-    r.guest?.idNumber ?? r.guest?.passportNumber ?? "",
-    r.guest?.phoneNumber ?? "",
-  ]);
+  const rows = reservations.map((r) => [r.guest?.firstName ?? "", r.guest?.lastName ?? "", r.guest?.idNumber ?? r.guest?.passportNumber ?? "", r.guest?.phoneNumber ?? ""]);
   autoTable(doc, {
     startY: 34,
     margin: { left: 14, right: 14 },
@@ -175,14 +169,7 @@ export function exportGuestProfilePdf(guest: AnyRecord, reservations: AnyRecord[
 
   doc.setFontSize(11); doc.text("GUEST INFORMATION", 14, 44);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...MUTED);
-  const info = [
-    ["Full Name", guestName(guest)],
-    ["Nationality", guest.nationality ?? ""],
-    ["CIN / Passport Number", guest.idNumber ?? guest.passportNumber ?? ""],
-    ["Phone", guest.phoneNumber ?? ""],
-    ["Email", guest.email ?? ""],
-    ["Address", guest.address ?? ""],
-  ];
+  const info = [["Full Name", guestName(guest)], ["Nationality", guest.nationality ?? ""], ["CIN / Passport Number", guest.idNumber ?? guest.passportNumber ?? ""], ["Phone", guest.phoneNumber ?? ""], ["Email", guest.email ?? ""], ["Address", guest.address ?? ""]];
   autoTable(doc, { startY: 49, body: info, theme: "plain", styles: { fontSize: 9, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: "bold", textColor: TEXT, cellWidth: 55 }, 1: { textColor: MUTED } } });
 
   const afterInfo = (doc as any).lastAutoTable?.finalY ?? 78;
@@ -194,7 +181,7 @@ export function exportGuestProfilePdf(guest: AnyRecord, reservations: AnyRecord[
     body: reservations.map((r) => [r.reservationNumber ?? "", roomOf(r), roomTypeOf(r), date(r.checkInDate), date(r.checkOutDate), r.nights ?? "", r.status ?? ""]),
     theme: "grid",
     headStyles: { fillColor: [245, 245, 245], textColor: TEXT, fontStyle: "bold", lineColor: BORDER, lineWidth: 0.25 },
-    bodyStyles: { textColor: TEXT, lineColor: BORDER, lineColor: BORDER, lineWidth: 0.25 },
+    bodyStyles: { textColor: TEXT, lineColor: BORDER, lineWidth: 0.25 },
     styles: { fontSize: 7, cellPadding: 2.5 },
   });
 
@@ -213,7 +200,7 @@ export function exportGuestProfilePdf(guest: AnyRecord, reservations: AnyRecord[
   const afterPayments = (doc as any).lastAutoTable?.finalY ?? afterReservations + 50;
   doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...TEXT);
   const lifetime = payments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
-  doc.text(`Total Lifetime Spending (DH)`, 105, afterPayments + 18, { align: "center" });
+  doc.text("Total Lifetime Spending (DH)", 105, afterPayments + 18, { align: "center" });
   doc.text(money(lifetime), 105, afterPayments + 25, { align: "center" });
   footer(doc);
   doc.save(`GuestProfile_${guest.id ?? "guest"}.pdf`);
