@@ -33,7 +33,7 @@
   --card: #2a2620;
   --card-border: #4a453e;
 
-  /* Brand / luxury gold ramp - adjusted for dark */
+  /* Luxury gold ramp - adjusted for dark */
   --primary-600: #B38B59;
   --primary-500: #C69C6D;
   --primary-400: #D4AF77;
@@ -81,17 +81,24 @@
 
 * {
   border-color: var(--card-border);
+  box-sizing: border-box;
 }
 
 html {
   color-scheme: light;
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
   background: var(--bg-deep);
   background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-display);
+  overflow-x: hidden;
 }
 
 ::selection {
@@ -115,6 +122,30 @@ body {
   border-radius: 999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(179, 139, 89, 0.6); }
+
+/* Desktop modals stay fully usable on every window size. */
+.fixed.inset-0 {
+  padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fixed.inset-0 > .bg-white {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+@media (max-height: 700px) {
+  .fixed.inset-0 {
+    padding: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .fixed.inset-0 > .bg-white {
+    max-height: calc(100vh - 1rem);
+  }
+}
 
 /* Luxury card */
 .glass-card {
