@@ -60,6 +60,51 @@ function stamp(doc: jsPDF, y: number) {
   doc.text("STAMP", 105, y + 20, { align: "center" });
 }
 
+function getImageFormat(dataUrl: string) {
+  if (dataUrl.startsWith("data:image/png")) return "PNG";
+  if (dataUrl.startsWith("data:image/webp")) return "WEBP";
+  return "JPEG";
+}
+
+function addGuestIdImage(doc: jsPDF, image: string | undefined | null) {
+  const x = 140;
+  const y = 49;
+  const w = 56;
+  const h = 43;
+
+  box(doc, x, y, w, h, [252, 252, 252]);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT);
+  doc.text("CIN / PASSPORT", x + w / 2, y + 6, { align: "center" });
+
+  if (!image) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...MUTED);
+    doc.text("No document image", x + w / 2, y + 23, { align: "center" });
+    doc.text("uploaded", x + w / 2, y + 30, { align: "center" });
+    return;
+  }
+
+  try {
+    const format = getImageFormat(image);
+    const props = doc.getImageProperties(image);
+    const maxW = w - 6;
+    const maxH = h - 11;
+    const ratio = Math.min(maxW / props.width, maxH / props.height);
+    const imageW = props.width * ratio;
+    const imageH = props.height * ratio;
+    doc.addImage(image, format, x + (w - imageW) / 2, y + 9, imageW, imageH, undefined, "FAST");
+  } catch (error) {
+    console.error("Failed to add guest ID image to PDF:", error);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...MUTED);
+    doc.text("Unable to display image", x + w / 2, y + 25, { align: "center" });
+  }
+}
+
 export function exportReservationPdf(reservation: AnyRecord) {
   const doc = new jsPDF("p", "mm", "a4");
   header(doc, "RESERVATION", "Hotel Management System");
@@ -162,7 +207,7 @@ export function exportCurrentGuestsPdf(reservations: AnyRecord[]) {
   doc.save(`CurrentGuests_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
-export function exportGuestProfilePdf(guest: AnyRecord, reservations: AnyRecord[], payments: AnyRecord[]) {
+export function exportGuestProfilePdf(guest: AnyRecord, reservations: AnyRecord[], payments: AnyRecord[], idDocumentImage?: string | null) {
   const doc = new jsPDF("p", "mm", "a4");
   header(doc, "GUEST PROFILE", "HOTEL INFORMATION");
   doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(...TEXT); doc.text("Hotel Aguelman", 105, 28, { align: "center" });
@@ -171,9 +216,10 @@ export function exportGuestProfilePdf(guest: AnyRecord, reservations: AnyRecord[
   doc.setFontSize(11); doc.text("GUEST INFORMATION", 14, 44);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...MUTED);
   const info = [["Full Name", guestName(guest)], ["Nationality", guest.nationality ?? ""], ["CIN / Passport Number", guest.idNumber ?? guest.passportNumber ?? ""], ["Phone", guest.phoneNumber ?? ""], ["Email", guest.email ?? ""], ["Address", guest.address ?? ""]];
-  autoTable(doc, { startY: 49, body: info, theme: "plain", styles: { fontSize: 9, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: "bold", textColor: TEXT, cellWidth: 55 }, 1: { textColor: MUTED } } });
+  autoTable(doc, { startY: 49, margin: { left: 14, right: 80 }, body: info, theme: "plain", styles: { fontSize: 9, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: "bold", textColor: TEXT, cellWidth: 55 }, 1: { textColor: MUTED } } });
+  addGuestIdImage(doc, idDocumentImage);
 
-  const afterInfo = (doc as any).lastAutoTable?.finalY ?? 78;
+  const afterInfo = Math.max((doc as any).lastAutoTable?.finalY ?? 78, 96);
   doc.setTextColor(...TEXT); doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("RESERVATION HISTORY", 105, afterInfo + 14, { align: "center" });
   autoTable(doc, {
     startY: afterInfo + 19,
