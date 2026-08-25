@@ -147,6 +147,38 @@ body {
   }
 }
 
+/* Room cards: keep every action visible without horizontal overflow. */
+.card-lift > .p-4 > .flex.gap-2.pt-1 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) repeat(3, 32px);
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.card-lift > .p-4 > .flex.gap-2.pt-1 > button {
+  min-width: 0;
+  width: 100%;
+  flex: none !important;
+}
+
+.card-lift > .p-4 > .flex.gap-2.pt-1 > button.h-8.w-8 {
+  width: 32px;
+  min-width: 32px;
+}
+
+@media (max-width: 420px) {
+  .card-lift > .p-4 > .flex.gap-2.pt-1 {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) repeat(3, 30px);
+    gap: 0.35rem;
+  }
+
+  .card-lift > .p-4 > .flex.gap-2.pt-1 > button.h-8.w-8 {
+    width: 30px;
+    min-width: 30px;
+  }
+}
+
 /* Luxury card */
 .glass-card {
   background: var(--card);
