@@ -13,6 +13,11 @@ export interface Notification {
   roomId?: number;
 }
 
+export interface UnreadNotificationsResponse {
+  data: Notification[];
+  processedExpiredReservations: number;
+}
+
 export const notificationService = {
   getAll: async (): Promise<Notification[]> => {
     const response = await apiClient.get<{ data: Notification[] }>('/notifications');
@@ -20,8 +25,16 @@ export const notificationService = {
   },
 
   getUnread: async (): Promise<Notification[]> => {
-    const response = await apiClient.get<{ data: Notification[] }>('/notifications/unread');
+    const response = await apiClient.get<UnreadNotificationsResponse>('/notifications/unread');
     return (response as any).data || [];
+  },
+
+  getUnreadWithProcessing: async (): Promise<UnreadNotificationsResponse> => {
+    const response = await apiClient.get<UnreadNotificationsResponse>('/notifications/unread');
+    return {
+      data: (response as any).data || [],
+      processedExpiredReservations: Number((response as any).processedExpiredReservations || 0),
+    };
   },
 
   getUnreadCount: async (): Promise<number> => {
