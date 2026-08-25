@@ -174,6 +174,7 @@ fn main() {
             .title("Hotel Aguelmam")
             .inner_size(1400.0, 900.0)
             .min_inner_size(1024.0, 700.0)
+            .maximized(true)
             .build()?;
 
             Ok(())
