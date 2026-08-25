@@ -101,25 +101,34 @@ mod server {
             return Err(format!("bundled Next server not found: {}", server_js.display()));
         }
 
+        let server_dir = server_js
+            .parent()
+            .ok_or_else(|| "invalid standalone server path".to_string())?;
         let database_url = format!("file:{}", db_path.to_string_lossy().replace('\\', "/"));
-        let log = open_server_log(&app_data_dir)?;
+        let mut log = open_server_log(&app_data_dir)?;
+        use std::io::Write;
+        let _ = writeln!(log, "Starting bundled Next.js server");
+        let _ = writeln!(log, "Node: {}", node_exe.display());
+        let _ = writeln!(log, "Server directory: {}", server_dir.display());
+        let _ = writeln!(log, "Server script: server.js");
+        let _ = writeln!(log, "Database: {}", database_url);
         let log_err = log
             .try_clone()
             .map_err(|e| format!("cannot clone server log handle: {e}"))?;
 
+        // On Windows, pass a relative script name while using the standalone
+        // directory as the child working directory. This avoids Node's
+        // Windows drive-letter parsing issue seen with an absolute C:\...\server.js
+        // argument when launching the bundled runtime from the installed app.
         let child = Command::new(&node_exe)
-            .arg(&server_js)
+            .arg("server.js")
             .env("NODE_ENV", "production")
             .env("PORT", PORT.to_string())
             .env("HOSTNAME", "127.0.0.1")
             .env("DATABASE_URL", &database_url)
             .env("JWT_SECRET", &jwt_secret)
             .env("TAURI_DESKTOP", "1")
-            .current_dir(
-                server_js
-                    .parent()
-                    .ok_or_else(|| "invalid standalone server path".to_string())?,
-            )
+            .current_dir(server_dir)
             .stdout(Stdio::from(log))
             .stderr(Stdio::from(log_err))
             .spawn()
@@ -165,6 +174,7 @@ fn main() {
             .title("Hotel Aguelmam")
             .inner_size(1400.0, 900.0)
             .min_inner_size(1024.0, 700.0)
+            .maximized(true)
             .build()?;
 
             Ok(())
