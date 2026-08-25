@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileText, ReceiptText, UsersRound, UserRound, Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "@/contexts/LanguageContext";
 import {
   exportCurrentGuestsPdf,
   exportGuestProfilePdf,
@@ -19,6 +20,55 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 export default function PdfExports() {
+  const { language } = useTranslation();
+  const ar = language === "ar";
+
+  const text = ar
+    ? {
+        title: "تصدير ملفات PDF",
+        subtitle: "مستندات فندقية احترافية بنفس تنسيق النماذج المرجعية.",
+        reservationTitle: "ملف حجز PDF",
+        reservationDescription: "بيانات الضيف والغرفة والإقامة والدفع.",
+        invoiceTitle: "فاتورة PDF",
+        invoiceDescription: "رقم الفاتورة والغرفة والليالي والمجموع والتوقيعات.",
+        guestProfileTitle: "ملف الضيف PDF",
+        guestProfileDescription: "معلومات الضيف وسجل الحجوزات وسجل المدفوعات.",
+        currentGuestsTitle: "الضيوف الحاليون PDF",
+        currentGuestsDescription: "الاسم الأول واسم العائلة ورقم البطاقة الوطنية/جواز السفر والهاتف.",
+        currentlyCheckedIn: "من حجوزات الضيوف المسجلين حالياً في الفندق.",
+        exportReservation: "تصدير ملف الحجز PDF",
+        exportInvoice: "تصدير الفاتورة PDF",
+        exportGuestProfile: "تصدير ملف الضيف PDF",
+        exportCurrentGuests: "تصدير ملف الضيوف الحاليين PDF",
+        generating: "جاري الإنشاء...",
+        loading: "جاري تحميل بيانات التصدير...",
+        failedLoad: "فشل تحميل بيانات ملفات PDF",
+        requestFailed: "فشل الطلب",
+        failedGenerate: "فشل إنشاء ملف PDF",
+      }
+    : {
+        title: "PDF Exports",
+        subtitle: "Professional hotel documents in the same format as your reference forms.",
+        reservationTitle: "Reservation PDF",
+        reservationDescription: "Guest, room, stay and payment details.",
+        invoiceTitle: "Invoice PDF",
+        invoiceDescription: "Invoice number, room, nights, total and signatures.",
+        guestProfileTitle: "Guest Profile PDF",
+        guestProfileDescription: "Guest information, reservation history and payment history.",
+        currentGuestsTitle: "Current Guests PDF",
+        currentGuestsDescription: "First name, last name, CIN/passport and phone.",
+        currentlyCheckedIn: "currently checked-in guest reservation(s).",
+        exportReservation: "Export Reservation PDF",
+        exportInvoice: "Export Invoice PDF",
+        exportGuestProfile: "Export Guest Profile PDF",
+        exportCurrentGuests: "Export Current Guests PDF",
+        generating: "Generating…",
+        loading: "Loading export data…",
+        failedLoad: "Failed to load PDF data",
+        requestFailed: "Request failed",
+        failedGenerate: "Failed to generate PDF",
+      };
+
   const [reservations, setReservations] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
@@ -45,7 +95,7 @@ export default function PdfExports() {
         if (paymentData?.[0]) setSelectedPayment(String(paymentData[0].id));
         if (guestData?.[0]) setSelectedGuest(String(guestData[0].id));
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load PDF data");
+        setError(e instanceof Error ? e.message : text.failedLoad);
       } finally {
         setLoading(false);
       }
@@ -58,7 +108,7 @@ export default function PdfExports() {
       setError(null);
       action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate PDF");
+      setError(e instanceof Error ? e.message : text.failedGenerate);
     } finally {
       setBusy(null);
     }
@@ -82,45 +132,45 @@ export default function PdfExports() {
           <Download size={20} />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-[#2F2A25]">PDF Exports</h3>
-          <p className="text-sm text-[#6B6258]">Professional hotel documents in the same format as your reference forms.</p>
+          <h3 className="text-lg font-semibold text-[#2F2A25]">{text.title}</h3>
+          <p className="text-sm text-[#6B6258]">{text.subtitle}</p>
         </div>
       </div>
 
       {error && <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {loading ? (
-        <div className="text-sm text-[#6B6258]">Loading export data…</div>
+        <div className="text-sm text-[#6B6258]">{text.loading}</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="rounded-xl border border-[#E7DFD4] p-5">
-            <div className="flex items-center gap-3 mb-4"><FileText size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">Reservation PDF</h4><p className="text-xs text-[#6B6258]">Guest, room, stay and payment details.</p></div></div>
-            <select value={selectedReservation} onChange={(e) => setSelectedReservation(e.target.value)} className="w-full mb-3 rounded-lg border border-[#E7DFD4] bg-[#F8F6F2] px-3 py-2 text-sm">
+            <div className="flex items-center gap-3 mb-4"><FileText size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">{text.reservationTitle}</h4><p className="text-xs text-[#6B6258]">{text.reservationDescription}</p></div></div>
+            <select aria-label={text.reservationTitle} value={selectedReservation} onChange={(e) => setSelectedReservation(e.target.value)} className="w-full mb-3 rounded-lg border border-[#E7DFD4] bg-[#F8F6F2] px-3 py-2 text-sm">
               {reservations.map((r) => <option key={r.id} value={r.id}>{r.reservationNumber} — {r.guest?.firstName} {r.guest?.lastName}</option>)}
             </select>
-            <Button disabled={!selectedReservationData || busy === "reservation"} onClick={() => run("reservation", () => exportReservationPdf(selectedReservationData))}><FileText size={15} /> {busy === "reservation" ? "Generating…" : "Export Reservation PDF"}</Button>
+            <Button disabled={!selectedReservationData || busy === "reservation"} onClick={() => run("reservation", () => exportReservationPdf(selectedReservationData))}><FileText size={15} /> {busy === "reservation" ? text.generating : text.exportReservation}</Button>
           </div>
 
           <div className="rounded-xl border border-[#E7DFD4] p-5">
-            <div className="flex items-center gap-3 mb-4"><ReceiptText size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">Invoice PDF</h4><p className="text-xs text-[#6B6258]">Invoice number, room, nights, total and signatures.</p></div></div>
-            <select value={selectedPayment} onChange={(e) => setSelectedPayment(e.target.value)} className="w-full mb-3 rounded-lg border border-[#E7DFD4] bg-[#F8F6F2] px-3 py-2 text-sm">
+            <div className="flex items-center gap-3 mb-4"><ReceiptText size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">{text.invoiceTitle}</h4><p className="text-xs text-[#6B6258]">{text.invoiceDescription}</p></div></div>
+            <select aria-label={text.invoiceTitle} value={selectedPayment} onChange={(e) => setSelectedPayment(e.target.value)} className="w-full mb-3 rounded-lg border border-[#E7DFD4] bg-[#F8F6F2] px-3 py-2 text-sm">
               {payments.map((p) => <option key={p.id} value={p.id}>{p.paymentNumber} — {p.reservation?.guest?.firstName} {p.reservation?.guest?.lastName} — {Number(p.amount ?? 0).toFixed(2)} DH</option>)}
             </select>
-            <Button disabled={!selectedPaymentData || busy === "invoice"} onClick={() => run("invoice", () => exportInvoicePdf(selectedPaymentData))}><ReceiptText size={15} /> {busy === "invoice" ? "Generating…" : "Export Invoice PDF"}</Button>
+            <Button disabled={!selectedPaymentData || busy === "invoice"} onClick={() => run("invoice", () => exportInvoicePdf(selectedPaymentData))}><ReceiptText size={15} /> {busy === "invoice" ? text.generating : text.exportInvoice}</Button>
           </div>
 
           <div className="rounded-xl border border-[#E7DFD4] p-5">
-            <div className="flex items-center gap-3 mb-4"><UsersRound size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">Current Guests PDF</h4><p className="text-xs text-[#6B6258]">First name, last name, CIN/passport and phone.</p></div></div>
-            <p className="text-sm text-[#6B6258] mb-3">{currentGuests.length} currently checked-in guest reservation(s).</p>
-            <Button disabled={busy === "current-guests"} onClick={() => run("current-guests", () => exportCurrentGuestsPdf(currentGuests))}><UsersRound size={15} /> {busy === "current-guests" ? "Generating…" : "Export Current Guests PDF"}</Button>
+            <div className="flex items-center gap-3 mb-4"><UsersRound size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">{text.currentGuestsTitle}</h4><p className="text-xs text-[#6B6258]">{text.currentGuestsDescription}</p></div></div>
+            <p className="text-sm text-[#6B6258] mb-3">{currentGuests.length} {text.currentlyCheckedIn}</p>
+            <Button disabled={busy === "current-guests"} onClick={() => run("current-guests", () => exportCurrentGuestsPdf(currentGuests))}><UsersRound size={15} /> {busy === "current-guests" ? text.generating : text.exportCurrentGuests}</Button>
           </div>
 
           <div className="rounded-xl border border-[#E7DFD4] p-5">
-            <div className="flex items-center gap-3 mb-4"><UserRound size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">Guest Profile PDF</h4><p className="text-xs text-[#6B6258]">Guest information, reservation history and payment history.</p></div></div>
-            <select value={selectedGuest} onChange={(e) => setSelectedGuest(e.target.value)} className="w-full mb-3 rounded-lg border border-[#E7DFD4] bg-[#F8F6F2] px-3 py-2 text-sm">
+            <div className="flex items-center gap-3 mb-4"><UserRound size={20} className="text-[#8C6A43]" /><div><h4 className="font-medium">{text.guestProfileTitle}</h4><p className="text-xs text-[#6B6258]">{text.guestProfileDescription}</p></div></div>
+            <select aria-label={text.guestProfileTitle} value={selectedGuest} onChange={(e) => setSelectedGuest(e.target.value)} className="w-full mb-3 rounded-lg border border-[#E7DFD4] bg-[#F8F6F2] px-3 py-2 text-sm">
               {guests.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}
             </select>
-            <Button disabled={!selectedGuestData || busy === "guest-profile"} onClick={() => run("guest-profile", () => exportGuestProfilePdf(selectedGuestData, guestReservations, guestPayments))}><UserRound size={15} /> {busy === "guest-profile" ? "Generating…" : "Export Guest Profile PDF"}</Button>
+            <Button disabled={!selectedGuestData || busy === "guest-profile"} onClick={() => run("guest-profile", () => exportGuestProfilePdf(selectedGuestData, guestReservations, guestPayments))}><UserRound size={15} /> {busy === "guest-profile" ? text.generating : text.exportGuestProfile}</Button>
           </div>
         </div>
       )}
