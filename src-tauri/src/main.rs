@@ -166,7 +166,23 @@ fn main() {
             let target_url = server::start(&handle)
                 .map_err(std::io::Error::other)?;
 
-            WebviewWindowBuilder::new(
+            // Keep WebView2 localStorage/cookies in a stable application data
+            // directory so the authenticated session survives closing and
+            // reopening the desktop application. This is intentionally outside
+            // the bundled resources directory because resources can be replaced
+            // by an application update.
+            #[cfg(not(debug_assertions))]
+            let webview_data_dir = handle
+                .path()
+                .app_data_dir()
+                .map_err(std::io::Error::other)?
+                .join("webview");
+
+            #[cfg(not(debug_assertions))]
+            std::fs::create_dir_all(&webview_data_dir)
+                .map_err(std::io::Error::other)?;
+
+            let webview = WebviewWindowBuilder::new(
                 &handle,
                 "main",
                 WebviewUrl::External(target_url.parse().expect("invalid target URL")),
@@ -174,8 +190,12 @@ fn main() {
             .title("Hotel Aguelmam")
             .inner_size(1400.0, 900.0)
             .min_inner_size(1024.0, 700.0)
-            .maximized(true)
-            .build()?;
+            .maximized(true);
+
+            #[cfg(not(debug_assertions))]
+            let webview = webview.data_directory(webview_data_dir);
+
+            webview.build()?;
 
             Ok(())
         })
