@@ -15,8 +15,13 @@ mod server {
     use std::time::{Duration, Instant};
     use tauri::Manager;
 
+    #[cfg(windows)]
+    use std::os::windows::process::CommandExt;
+
     pub const PORT: u16 = 3579;
     const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
+    #[cfg(windows)]
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     pub struct ServerHandle(pub Mutex<Option<Child>>);
 
@@ -95,7 +100,8 @@ mod server {
         let _ = writeln!(log, "Database: {}", database_url);
         let log_err = log.try_clone().map_err(|e| format!("cannot clone server log handle: {e}"))?;
 
-        let child = Command::new(&node_exe)
+        let mut command = Command::new(&node_exe);
+        command
             .arg("server.js")
             .env("NODE_ENV", "production")
             .env("PORT", PORT.to_string())
@@ -105,7 +111,12 @@ mod server {
             .env("TAURI_DESKTOP", "1")
             .current_dir(server_dir)
             .stdout(Stdio::from(log))
-            .stderr(Stdio::from(log_err))
+            .stderr(Stdio::from(log_err));
+
+        #[cfg(windows)]
+        command.creation_flags(CREATE_NO_WINDOW);
+
+        let child = command
             .spawn()
             .map_err(|e| format!("failed to start bundled Next.js server: {e}"))?;
 
