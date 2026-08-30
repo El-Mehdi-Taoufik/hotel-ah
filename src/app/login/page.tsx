@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, Sparkles, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { authService } from "@/services/auth.service";
@@ -11,12 +11,54 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { auth, errors, common, isLoaded, direction } = useTranslation();
+  const { auth, errors, common, direction } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [restoringSession, setRestoringSession] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // Tauri/WebView can occasionally lose the HttpOnly cookie between app
+  // launches while keeping localStorage. Restore the session cookie from the
+  // persisted JWT before showing the login form.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        if (!cancelled) setRestoringSession(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/restore-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+
+        if (response.ok) {
+          router.replace("/dashboard");
+          return;
+        }
+      } catch (restoreError) {
+        console.warn("Session restore failed:", restoreError);
+      }
+
+      // Token is invalid/expired. Start a clean login session.
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("refreshToken");
+      if (!cancelled) setRestoringSession(false);
+    }
+
+    restoreSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,9 +75,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('refreshToken', response.refreshToken);
 
-      // Dispatch event to notify Navbar and other components
       window.dispatchEvent(new Event('userUpdated'));
-
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Login error:", err);
@@ -45,9 +85,16 @@ export default function LoginPage() {
     }
   }
 
-return (
+  if (restoringSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8F6F2]" dir={direction}>
+        <Loader2 size={28} className="animate-spin text-[#B38B59]" aria-label="Restoring session" />
+      </div>
+    );
+  }
+
+  return (
     <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-[#F8F6F2]" dir={direction}>
-      {/* Animated ambient background */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[#B38B59]/25 blur-[100px] animate-pulse" style={{ animationDuration: "6s" }} />
         <div className="absolute top-1/2 -right-32 h-[28rem] w-[28rem] rounded-full bg-[#C69C6D]/20 blur-[110px] animate-pulse" style={{ animationDuration: "8s" }} />
@@ -56,9 +103,9 @@ return (
 
       <div className="w-full max-w-md animate-fade-in">
         <div className="flex flex-col items-center mb-8">
-          <img 
-            src="/logo.jpeg" 
-            alt="Hotel Aguelmam Logo" 
+          <img
+            src="/logo.jpeg"
+            alt="Hotel Aguelmam Logo"
             className="h-14 w-14 rounded-2xl object-contain mb-4"
           />
           <h1 className="text-2xl font-semibold text-[#2F2A25] tracking-tight">{auth('loginTitle')}</h1>
@@ -134,7 +181,7 @@ return (
             ) : (
               auth('signIn')
             )}
-         </Button>
+          </Button>
         </form>
       </div>
     </div>
