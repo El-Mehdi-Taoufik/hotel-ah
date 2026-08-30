@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 const SESSION_COOKIE = "session";
-const PUBLIC_API_PREFIXES = ["/api/auth/login"];
+const PUBLIC_API_PREFIXES = ["/api/auth/login", "/api/auth/restore-session"];
 
 function getSecretKey() {
   return new TextEncoder().encode(process.env.JWT_SECRET ?? "");
