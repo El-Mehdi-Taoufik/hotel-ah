@@ -73,37 +73,18 @@ mod server {
     }
 
     pub fn start(handle: &tauri::AppHandle) -> Result<String, String> {
-        let app_data_dir = handle
-            .path()
-            .app_data_dir()
-            .map_err(|e| format!("could not resolve app data dir: {e}"))?;
-        let resource_dir = handle
-            .path()
-            .resource_dir()
-            .map_err(|e| format!("could not resolve resource dir: {e}"))?;
-
+        let app_data_dir = handle.path().app_data_dir().map_err(|e| format!("could not resolve app data dir: {e}"))?;
+        let resource_dir = handle.path().resource_dir().map_err(|e| format!("could not resolve resource dir: {e}"))?;
         let db_path = ensure_database(&app_data_dir, &resource_dir)?;
         let jwt_secret = ensure_jwt_secret(&app_data_dir)?;
 
-        let server_js = resource_dir
-            .join("resources")
-            .join("standalone")
-            .join("server.js");
-        let node_exe = resource_dir
-            .join("resources")
-            .join("node")
-            .join(if cfg!(windows) { "node.exe" } else { "node" });
+        let server_js = resource_dir.join("resources").join("standalone").join("server.js");
+        let node_exe = resource_dir.join("resources").join("node").join(if cfg!(windows) { "node.exe" } else { "node" });
 
-        if !node_exe.exists() {
-            return Err(format!("bundled Node runtime not found: {}", node_exe.display()));
-        }
-        if !server_js.exists() {
-            return Err(format!("bundled Next server not found: {}", server_js.display()));
-        }
+        if !node_exe.exists() { return Err(format!("bundled Node runtime not found: {}", node_exe.display())); }
+        if !server_js.exists() { return Err(format!("bundled Next server not found: {}", server_js.display())); }
 
-        let server_dir = server_js
-            .parent()
-            .ok_or_else(|| "invalid standalone server path".to_string())?;
+        let server_dir = server_js.parent().ok_or_else(|| "invalid standalone server path".to_string())?;
         let database_url = format!("file:{}", db_path.to_string_lossy().replace('\\', "/"));
         let mut log = open_server_log(&app_data_dir)?;
         use std::io::Write;
@@ -112,14 +93,8 @@ mod server {
         let _ = writeln!(log, "Server directory: {}", server_dir.display());
         let _ = writeln!(log, "Server script: server.js");
         let _ = writeln!(log, "Database: {}", database_url);
-        let log_err = log
-            .try_clone()
-            .map_err(|e| format!("cannot clone server log handle: {e}"))?;
+        let log_err = log.try_clone().map_err(|e| format!("cannot clone server log handle: {e}"))?;
 
-        // On Windows, pass a relative script name while using the standalone
-        // directory as the child working directory. This avoids Node's
-        // Windows drive-letter parsing issue seen with an absolute C:\...\server.js
-        // argument when launching the bundled runtime from the installed app.
         let child = Command::new(&node_exe)
             .arg("server.js")
             .env("NODE_ENV", "production")
@@ -135,7 +110,6 @@ mod server {
             .map_err(|e| format!("failed to start bundled Next.js server: {e}"))?;
 
         handle.manage(ServerHandle(Mutex::new(Some(child))));
-
         if !wait_for_port(PORT, STARTUP_TIMEOUT) {
             if let Some(state) = handle.try_state::<ServerHandle>() {
                 if let Some(mut child) = state.0.lock().map_err(|_| "server state lock poisoned")?.take() {
@@ -143,13 +117,8 @@ mod server {
                     let _ = child.wait();
                 }
             }
-            return Err(format!(
-                "Next.js server did not become ready on 127.0.0.1:{PORT} within {} seconds; see {}",
-                STARTUP_TIMEOUT.as_secs(),
-                app_data_dir.join("server.log").display()
-            ));
+            return Err(format!("Next.js server did not become ready on 127.0.0.1:{PORT} within {} seconds; see {}", STARTUP_TIMEOUT.as_secs(), app_data_dir.join("server.log").display()));
         }
-
         Ok(format!("http://127.0.0.1:{PORT}"))
     }
 }
@@ -163,40 +132,24 @@ fn main() {
             let target_url = "http://localhost:3000".to_string();
 
             #[cfg(not(debug_assertions))]
-            let target_url = server::start(&handle)
-                .map_err(std::io::Error::other)?;
-
-            // Keep WebView2 localStorage/cookies in a stable application data
-            // directory so the authenticated session survives closing and
-            // reopening the desktop application. This is intentionally outside
-            // the bundled resources directory because resources can be replaced
-            // by an application update.
-            #[cfg(not(debug_assertions))]
-            let webview_data_dir = handle
-                .path()
-                .app_data_dir()
-                .map_err(std::io::Error::other)?
-                .join("webview");
+            let target_url = server::start(&handle).map_err(std::io::Error::other)?;
 
             #[cfg(not(debug_assertions))]
-            std::fs::create_dir_all(&webview_data_dir)
-                .map_err(std::io::Error::other)?;
+            let webview_data_dir = handle.path().app_data_dir().map_err(std::io::Error::other)?.join("webview");
 
-            let webview = WebviewWindowBuilder::new(
-                &handle,
-                "main",
-                WebviewUrl::External(target_url.parse().expect("invalid target URL")),
-            )
-            .title("Hotel Aguelmam")
-            .inner_size(1400.0, 900.0)
-            .min_inner_size(1024.0, 700.0)
-            .maximized(true);
+            #[cfg(not(debug_assertions))]
+            std::fs::create_dir_all(&webview_data_dir).map_err(std::io::Error::other)?;
+
+            let webview = WebviewWindowBuilder::new(&handle, "main", WebviewUrl::External(target_url.parse().expect("invalid target URL")))
+                .title("Hotel Aguelmam")
+                .inner_size(1400.0, 900.0)
+                .min_inner_size(1024.0, 700.0)
+                .maximized(true);
 
             #[cfg(not(debug_assertions))]
             let webview = webview.data_directory(webview_data_dir);
 
             webview.build()?;
-
             Ok(())
         })
         .on_window_event(|window, event| {
